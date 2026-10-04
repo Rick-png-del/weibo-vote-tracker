@@ -1,0 +1,7 @@
+node_modules
+/outputs/
+/data/
+/logs/
+*.pyc
+__pycache__/
+.DS_Store

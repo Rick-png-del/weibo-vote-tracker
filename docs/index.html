@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#08131f" />
+    <meta
+      name="description"
+      content="KPL 十年最具人气选手票数、增长速度与历史趋势看板"
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>KPL 人气票数监测</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">WEIBO VOTE MONITOR</p>
+        <h1 id="activity-title">KPL 人气票数监测</h1>
+      </div>
+      <div class="update-state" aria-live="polite">
+        <span class="pulse" aria-hidden="true"></span>
+        <div>
+          <span>最近采集</span>
+          <strong id="last-updated">读取中…</strong>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="kpi-grid" aria-label="当前概况">
+        <article class="kpi kpi-primary">
+          <span>当前第一</span>
+          <strong id="leader-name">—</strong>
+          <small id="leader-votes">—</small>
+        </article>
+        <article class="kpi">
+              <span>第一名约 30 分钟增长</span>
+          <strong id="leader-30m">—</strong>
+          <small>相较最近一次记录</small>
+        </article>
+        <article class="kpi">
+          <span>第一名 24 小时增长</span>
+          <strong id="leader-24h">—</strong>
+          <small id="leader-speed">—</small>
+        </article>
+        <article class="kpi">
+          <span>已记录候选人</span>
+          <strong id="candidate-count">—</strong>
+          <small id="snapshot-count">—</small>
+        </article>
+      </section>
+
+      <section class="chart-grid">
+        <article class="panel ranking-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label">CURRENT</p>
+              <h2>当前票数前 10 名</h2>
+            </div>
+            <span class="unit-label" id="vote-unit">票数</span>
+          </div>
+          <div id="ranking-chart" class="bar-chart" role="img" aria-label="当前票数前十名条形图"></div>
+        </article>
+
+        <article class="panel trend-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label">VELOCITY</p>
+              <h2>票数与每日增长</h2>
+            </div>
+            <label class="select-control">
+              <span class="sr-only">选择候选人</span>
+              <select id="candidate-select"></select>
+            </label>
+          </div>
+          <div class="time-controls" aria-label="趋势时间范围">
+            <button type="button" data-range="24h" class="active">24 小时</button>
+            <button type="button" data-range="7d">7 天</button>
+            <button type="button" data-range="all">全部</button>
+          </div>
+          <div id="trend-chart" class="svg-chart" role="img" aria-label="候选人票数趋势图"></div>
+          <div id="daily-growth" class="daily-growth" aria-label="候选人每日增长"></div>
+        </article>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-heading table-heading">
+          <div>
+            <p class="section-label">ALL CANDIDATES</p>
+            <h2>完整排名与增长速度</h2>
+          </div>
+          <div class="table-tools">
+            <label>
+              <span class="sr-only">搜索候选人</span>
+              <input id="search-input" type="search" placeholder="搜索候选人" autocomplete="off" />
+            </label>
+            <label>
+              <span class="sr-only">排序方式</span>
+              <select id="sort-select">
+                <option value="votes">按当前票数</option>
+                <option value="delta30">按 30 分钟增长</option>
+                <option value="delta24">按 24 小时增长</option>
+                <option value="speed">按每小时增速</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>排名</th>
+                <th>候选人</th>
+                <th class="number">当前票数</th>
+                <th class="number">约 30 分钟</th>
+                <th class="number">24 小时</th>
+                <th class="number">每小时增速</th>
+                <th class="number">投票人数</th>
+              </tr>
+            </thead>
+            <tbody id="ranking-body"></tbody>
+          </table>
+        </div>
+        <p id="table-summary" class="table-summary"></p>
+      </section>
+    </main>
+
+    <footer>
+      数据来自微博投票页面。计划每 30 分钟更新一次；GitHub 定时任务可能出现短时延迟，页面会标记超过 75 分钟未更新的数据。
+    </footer>
+
+    <div id="error-state" class="error-state" hidden>
+      <strong>暂时无法读取数据</strong>
+      <span id="error-message">请稍后刷新页面。</span>
+    </div>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>
