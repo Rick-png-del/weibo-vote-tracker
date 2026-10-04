@@ -82,7 +82,7 @@ function getMetrics() {
       delta24,
       speed,
     };
-  }).sort((a, b) => b.votes - a.votes);
+  }).sort((a, b) => b.votes - a.votes).map((item, position) => ({ ...item, position: position + 1 }));
 }
 
 function renderKpis(metrics) {
@@ -215,7 +215,7 @@ function renderTable(metrics) {
   const body = document.querySelector("#ranking-body");
   body.innerHTML = rows.map((item) => `
     <tr>
-      <td class="rank-cell">${item.index + 1}</td>
+      <td class="rank-cell">${item.position}</td>
       <td class="candidate-cell"><strong>${escapeHtml(item.name)}</strong><small>ID ${item.id}</small></td>
       <td class="number">${formatNumber.format(item.votes)}</td>
       <td class="number ${metricClass(item.delta30)}">${signed(item.delta30)}</td>

@@ -18,4 +18,8 @@ Codex 中的“微博投票每半小时记录”自动化每 30 分钟执行一�
 
 `docs/` 是 GitHub Pages 静态看板，显示当前排名、30 分钟与 24 小时增量、每小时增长速度和候选人历史趋势。
 
-GitHub Actions 工作流 `.github/workflows/update-and-deploy.yml` 每 30 分钟运行 `scripts/fetch_votes.py`，把新快照保存到 `docs/data/history.json` 后重新发布网站。认证请求保存在 GitHub Actions Secret `WEIBO_REQUEST_JSON`，不会提交到仓库。
+线上地址：https://rick-png-del.github.io/weibo-vote-tracker/
+
+GitHub Actions 工作流 `.github/workflows/update-and-deploy.yml` 在每小时第 17、47 分钟运行 `scripts/fetch_votes.py`，把新快照保存到 `docs/data/history.json` 后重新发布网站。网页本身是静态文件，历史数据会随每次工作流发布更新；浏览器每 5 分钟检查一次新版本。认证请求保存在 GitHub Actions Secret `WEIBO_REQUEST_JSON`，不会提交到仓库。
+
+GitHub 的定时工作流最短间隔为 5 分钟，但高峰期可能延迟。这里选择 30 分钟，兼顾更新速度、提交数量和数据文件增长。公有仓库使用标准 GitHub 托管运行器不计 Actions 分钟费用。
