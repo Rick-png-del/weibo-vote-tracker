@@ -23,3 +23,5 @@ Codex 中的“微博投票每半小时记录”自动化每 30 分钟执行一�
 GitHub Actions 工作流 `.github/workflows/update-and-deploy.yml` 在每小时第 17、47 分钟运行 `scripts/fetch_votes.py`，把新快照保存到 `docs/data/history.json` 后重新发布网站。网页本身是静态文件，历史数据会随每次工作流发布更新；浏览器每 5 分钟检查一次新版本。认证请求保存在 GitHub Actions Secret `WEIBO_REQUEST_JSON`，不会提交到仓库。
 
 GitHub 的定时工作流最短间隔为 5 分钟，但高峰期可能延迟。这里选择 30 分钟，兼顾更新速度、提交数量和数据文件增长。公有仓库使用标准 GitHub 托管运行器不计 Actions 分钟费用。
+
+缺失历史补齐：`python scripts/backfill_history.py` 先从本地 CSV 恢复缺口中的真实票数（无历史人数时留空），再对超过 75 分钟的缺口按 30 分钟线性插值。估算快照包含 `estimated: true` 和前后真实快照 `bounds`，网页以虚线显示。原始云端数据备份在本地 `data/history_before_backfill.json`。插值不能还原真实波动，不修改真实快照或最新票数。

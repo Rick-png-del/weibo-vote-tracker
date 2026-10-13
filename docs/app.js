@@ -79,6 +79,8 @@ function getMetrics() {
       votes,
       voters: valueAt(latest, index, "voters"),
       delta30,
+      delta30Estimated: Boolean(previous?.estimated),
+      delta24Estimated: Boolean(previous24?.estimated),
       delta24,
       speed,
     };
@@ -99,13 +101,13 @@ function renderKpis(metrics) {
   document.querySelector(".pulse").classList.toggle("stale", stale);
   document.querySelector("#leader-name").textContent = leader.name;
   document.querySelector("#leader-votes").textContent = `${formatNumber.format(leader.votes)} ${data.unit}`;
-  document.querySelector("#leader-30m").textContent = signed(leader.delta30);
+  document.querySelector("#leader-30m").textContent = `${leader.delta30Estimated ? "约 " : ""}${signed(leader.delta30)}`;
   document.querySelector("#leader-30m").className = metricClass(leader.delta30);
-  document.querySelector("#leader-24h").textContent = signed(leader.delta24);
+  document.querySelector("#leader-24h").textContent = `${leader.delta24Estimated ? "约 " : ""}${signed(leader.delta24)}`;
   document.querySelector("#leader-24h").className = metricClass(leader.delta24);
   document.querySelector("#leader-speed").textContent = leader.speed === null ? "等待更多历史记录" : `${signed(Math.round(leader.speed))} / 小时`;
   document.querySelector("#candidate-count").textContent = formatNumber.format(metrics.length);
-  document.querySelector("#snapshot-count").textContent = `${formatNumber.format(data.snapshots.length)} 次历史记录`;
+  document.querySelector("#snapshot-count").textContent = `${formatNumber.format(data.snapshots.filter((s) => !s.estimated).length)} 次采集 · ${data.snapshots.filter((s) => s.estimated).length} 次估算`;
   document.querySelector("#vote-unit").textContent = data.unit;
 }
 
@@ -151,8 +153,13 @@ function renderTrend() {
   const padding = Math.max((maxValue - minValue) * 0.18, maxValue * 0.01, 1);
   const yMin = Math.max(0, minValue - padding);
   const yMax = maxValue + padding;
-  const x = (i) => pad.left + (snapshots.length === 1 ? (width - pad.left - pad.right) / 2 : i / (snapshots.length - 1) * (width - pad.left - pad.right));
+  const times = snapshots.map((snapshot) => new Date(snapshot.timestamp).getTime());
+  const x = (i) => pad.left + (snapshots.length === 1 ? (width - pad.left - pad.right) / 2 : (times[i] - times[0]) / (times.at(-1) - times[0]) * (width - pad.left - pad.right));
   const y = (value) => pad.top + (yMax - value) / Math.max(yMax - yMin, 1) * (height - pad.top - pad.bottom);
+  const segments = values.slice(1).map((value, i) => {
+    const estimated = snapshots[i].estimated || snapshots[i + 1].estimated;
+    return `<line class="trend-line" x1="${x(i)}" y1="${y(values[i])}" x2="${x(i+1)}" y2="${y(value)}" ${estimated ? 'stroke-dasharray="6 5"' : ''}><title>${estimated ? '缺失时段：线性插值估算' : '真实采集记录'}</title></line>`;
+  }).join("");
   const points = values.map((value, i) => `${x(i)},${y(value)}`).join(" ");
   const area = `${pad.left},${height - pad.bottom} ${points} ${x(values.length - 1)},${height - pad.bottom}`;
   const ticks = [0, 0.5, 1].map((position) => {
@@ -165,11 +172,11 @@ function renderTrend() {
   const lastLabel = formatDateTime.format(new Date(snapshots.at(-1).timestamp));
 
   root.setAttribute("aria-label", `${candidate.name}票数趋势，${firstLabel}至${lastLabel}`);
-  root.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
+  root.innerHTML = `<p class="table-summary">实线：采集值 · 虚线：缺失时段的线性估算（不代表实际波动）</p><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
     <defs><linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8200" stop-opacity="0.30"/><stop offset="1" stop-color="#ff8200" stop-opacity="0"/></linearGradient></defs>
     ${ticks}
     <polygon class="trend-area" points="${area}" />
-    <polyline class="trend-line" points="${points}" />
+    ${segments}
     ${values.map((value, i) => `<circle class="trend-dot" cx="${x(i)}" cy="${y(value)}" r="${snapshots.length < 30 ? 3 : 0}" />`).join("")}
     <text class="axis-text" x="${pad.left}" y="${height - 10}">${firstLabel}</text>
     <text class="axis-text" x="${width - pad.right}" y="${height - 10}" text-anchor="end">${lastLabel}</text>
@@ -184,14 +191,15 @@ function renderDailyGrowth(index) {
     const value = valueAt(snapshot, index);
     if (value === null) continue;
     const day = snapshot.timestamp.slice(0, 10);
-    const entry = byDay.get(day) || { first: value, last: value };
+    const entry = byDay.get(day) || { first: value, last: value, estimated: false };
+    entry.estimated ||= Boolean(snapshot.estimated);
     entry.last = value;
     byDay.set(day, entry);
   }
-  const days = [...byDay.entries()].slice(-7).map(([day, entry]) => ({ day, growth: entry.last - entry.first }));
+  const days = [...byDay.entries()].slice(-7).map(([day, entry]) => ({ day, growth: entry.last - entry.first, estimated: entry.estimated }));
   const root = document.querySelector("#daily-growth");
-  root.innerHTML = `<h3>最近每日增长</h3><div class="daily-list">${days.map(({ day, growth }) => `
-    <div class="daily-item"><span>${day.slice(5)}</span><strong class="${metricClass(growth)}">${signed(growth)}</strong></div>
+  root.innerHTML = `<h3>最近每日增长</h3><div class="daily-list">${days.map(({ day, growth, estimated }) => `
+    <div class="daily-item"><span>${day.slice(5)}</span><strong class="${metricClass(growth)}">${estimated ? "约 " : ""}${signed(growth)}</strong></div>
   `).join("")}</div>`;
 }
 
@@ -218,8 +226,8 @@ function renderTable(metrics) {
       <td class="rank-cell">${item.position}</td>
       <td class="candidate-cell"><strong>${escapeHtml(item.name)}</strong><small>ID ${item.id}</small></td>
       <td class="number">${formatNumber.format(item.votes)}</td>
-      <td class="number ${metricClass(item.delta30)}">${signed(item.delta30)}</td>
-      <td class="number ${metricClass(item.delta24)}">${signed(item.delta24)}</td>
+      <td class="number ${metricClass(item.delta30)}">${item.delta30Estimated ? "约 " : ""}${signed(item.delta30)}</td>
+      <td class="number ${metricClass(item.delta24)}">${item.delta24Estimated ? "约 " : ""}${signed(item.delta24)}</td>
       <td class="number ${metricClass(item.speed)}">${item.speed === null ? "—" : `${signed(Math.round(item.speed))}/h`}</td>
       <td class="number ${item.voters === null ? "unavailable" : ""}">${item.voters === null ? "—" : formatNumber.format(item.voters)}</td>
     </tr>
